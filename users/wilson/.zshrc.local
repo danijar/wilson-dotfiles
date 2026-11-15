@@ -1,0 +1,17 @@
+setopt hist_ignore_all_dups
+
+git_branch() {
+  local branch
+  branch=$(git symbolic-ref --short HEAD 2>/dev/null) && echo " %F{red}($branch)%f"
+}
+PROMPT='%F{111}%m%f %F{245}→%f %F{cyan}%1~%f$(git_branch) %F{245}›%f '
+
+zle -D zle-line-init
+bindkey '^R' history-incremental-search-backward
+bindkey -M viins '^?' backward-delete-char
+bindkey -M viins '^H' backward-delete-char
+
+for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+  [ -d ~/.zsh/$plugin ] || git clone -q --depth 1 https://github.com/zsh-users/$plugin ~/.zsh/$plugin
+  . ~/.zsh/$plugin/$plugin.zsh
+done

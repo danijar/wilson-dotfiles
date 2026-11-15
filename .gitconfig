@@ -1,5 +1,6 @@
 [push]
   default = current
+  autoSetupRemote = true
 [pull]
   rebase = true
 [rebase]
@@ -9,12 +10,12 @@
   reword = commit --amend
 [init]
   defaultBranch = main
-  editor = nvim
 [core]
+  editor = nvim
   excludesfile = ~/.gitignore_global
   pager = delta
-  editor = nvim
 [delta]
+  # brew/apt install git-delta
   syntax-theme = none
   file-style = bold
   file-decoration-style = none
@@ -29,6 +30,5 @@
   line-numbers-right-style = gray
   line-numbers-zero-style = gray
   max-line-length = 1000
-[user]
-	name = Wilson Yan
-	email = wilson1.yan@berkeley.edu
+[include]
+  path = ~/.gitconfig.local

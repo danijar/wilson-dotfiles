@@ -1,30 +1,81 @@
-setopt SHARE_HISTORY          # Share history between all sessions
-setopt INC_APPEND_HISTORY     # Write commands to history file immediately, not on shell exit
-setopt HIST_IGNORE_DUPS       # Don't record duplicates
-setopt HIST_IGNORE_ALL_DUPS   # Remove older duplicate entries
-setopt HIST_FIND_NO_DUPS      # Don't show duplicates when searching
+# Enable command completion
+autoload -U compinit && compinit
 
+for script in ~/profile/*; do . $script; done
+
+# History
+SAVEHIST=10000
+HISTSIZE=20000
 HISTFILE=~/.zsh_history
-HISTSIZE=10000                # Lines kept in memory per session
-SAVEHIST=10000                # Lines saved to HISTFILE
+setopt share_history
+setopt inc_append_history
+setopt hist_expire_dups_first
+setopt hist_ignore_dups
+setopt hist_find_no_dups
+setopt hist_ignore_space
+setopt hist_verify
+setopt hist_reduce_blanks
 
-export PATH="$HOME/.local/bin:$PATH"
- 
-setopt PROMPT_SUBST
+# Vi commands
+case ${DOTFILES_VIM_MODE:-0} in
+  1)
+    bindkey -v
+    export KEYTIMEOUT=1
+    export INPUTRC=~/.config/readline/vim.inputrc
+    zle-line-init() { zle vi-cmd-mode; }
+    zle -N zle-line-init
+    ;;
+  0) bindkey -e ;;
+  *) echo "DOTFILES_VIM_MODE must be 0 or 1" >&2 ;;
+esac
 
-git_branch() {
-  local branch
-  branch=$(git symbolic-ref --short HEAD 2>/dev/null) && echo " %F{red}($branch)%f"
+# Clipboard
+clip-yank() {
+    zle copy-region-as-kill
+    print -rn -- $CUTBUFFER | $HOME/bin/copy
+}
+zle -N clip-yank
+clip-cut() {
+    zle kill-region
+    print -rn -- $CUTBUFFER | $HOME/bin/copy
+}
+zle -N clip-cut
+clip-paste() {
+    PASTE=$($HOME/bin/paste)
+    LBUFFER="$LBUFFER${RBUFFER:0:1}"
+    RBUFFER="$PASTE${RBUFFER:1:${#RBUFFER}}"
+}
+zle -N clip-paste
+bindkey -M vicmd "y" clip-yank
+bindkey -M vicmd "Y" clip-cut
+bindkey -M vicmd "p" clip-paste
+
+bindkey -M vicmd "^K" up-history
+bindkey -M vicmd "^J" down-history
+
+# Edit command in Vim
+autoload edit-command-line
+zle -N edit-command-line
+bindkey -M vicmd v edit-command-line
+
+# Prompt
+export VIRTUAL_ENV_DISABLE_PROMPT=1
+autoload vcs_info
+precmd() vcs_info
+zstyle ":vcs_info:git:*" formats "%b"
+setopt promptsubst
+(){
+    local line
+    if [ -n "$SSH_CONNECTION" ] || [ -n "$KUBERNETES_SERVICE_HOST" ]; then
+        line='%B%F{black}%K{red}'
+    else
+        line='%B%F{black}%K{blue}'
+    fi
+    line+=' %T '
+    line+='${vcs_info_msg_0_:+± ${vcs_info_msg_0_} }'
+    line+='${VIRTUAL_ENV:+↱ venv }'
+    line+='%K{yellow} %~ %k%f%b'
+    PS1="$line "
 }
 
-PROMPT='%F{111}%m%f %F{245}→%f %F{cyan}%1~%f$(git_branch) %F{245}›%f '
-
-alias ls='ls --color=auto'
- 
-source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
-source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
- 
-bindkey -v
-bindkey '^R' history-incremental-search-backward
-bindkey -M viins '^?' backward-delete-char
-bindkey -M viins '^H' backward-delete-char
+test -f ~/.zshrc.local && . ~/.zshrc.local
